@@ -1,4 +1,3 @@
-
 import os
 import sys
 import socket
@@ -16,7 +15,7 @@ import tty
 class QuickMathClient:
     def __init__(self):
         self.UDPip = self.getIP()
-        self.teamName = "Chebyshev" + str(int(random.random() * 100))
+        self.teamName = "Chebyshev"
         self.host = None
         self.port = None
         self.udpPort = 13117
@@ -24,6 +23,11 @@ class QuickMathClient:
         self.clientSocket = None
         self.inputListener = None
         self.gameOn = False
+        self.colorReset = "\033[0m"
+        self.red = "\033[31m"
+        self.magenta = "\033[35m"
+        self.underline = '\033[4m'
+        self.cyan = "\033[36m"
 
     def run(self):
         while True:
@@ -66,8 +70,7 @@ class QuickMathClient:
 
             else:
                 ip = get_if_addr("eth1")
-        except:
-            print("invalid input")
+        except :
             return self.getIP()
         return ip
 
@@ -79,31 +82,30 @@ class QuickMathClient:
 
             self.udpClientSocket.bind(
                 ("", self.udpPort))  # (str(ipaddress.ip_network( self.UDPip  + '/21', False).broadcast_address)
-            print("Client started, listening for offer requests...")
+            print(self.magenta, "Client started, listening for offer requests...", self.colorReset)
             while True:
                 msg, (ip, _) = self.udpClientSocket.recvfrom(2048)
 
                 port = self.unpackPort(msg)
-                print(f"recive from {str(ip)} /  {str(port)}")
+                # print(f"recive from {str(ip)} /  {str(port)}")
                 if port is not None:
                     break
 
             self.host, self.port = ip, port
-        except e:
-            print("error on offers")
-            print(str(e))
+        except:
+            pass
         finally:
             self.udpClientSocket.close()
 
     def connecting_to_a_server(self):
         try:
-            print(f"Received offer from {self.host}, attempting to connect...")
+            print(self.magenta, f"Received offer from {self.host}, attempting to connect...", self.colorReset)
             self.clientSocket = socket.socket()
             self.clientSocket.setblocking(True)
             self.clientSocket.connect((self.host, self.port))
             self.clientSocket.send(str.encode(self.teamName + '\n'))
-        except socket.error as e:
-            print(str(e))
+        except:
+            pass
 
     def game_mode(self):
         try:
@@ -126,8 +128,8 @@ class QuickMathClient:
                 selector.register(self.clientSocket, selectors.EVENT_READ, self._handle_write)
                 setings = termios.tcgetattr(sys.stdin)
                 tty.setcbreak(sys.stdin.fileno())
-            except BaseException as e:
-                print(str(e))
+            except:
+                pass
 
             while self.clientSocket is not None:
                 sys.stdin.flush()
@@ -141,23 +143,23 @@ class QuickMathClient:
 
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, setings)
 
-        except e:
-            print(str(e))
+        except :
+            pass
 
     def _handle_write(self):
         try:
             msg = self.clientSocket.recv(2048)
-            print(msg.decode())
+            print(self.underline,self.cyan,msg.decode(),self.colorReset)
             sys.stdout.flush()
         except socket.error as e:
-            print(str(e))
+            pass
+
         self.clientSocket.close()
         self.clientSocket = None
 
     def _getMessegeC(self):
         try:
             msg = sys.stdin.read(1)  # input()   #  os.read(sys.stdin ,1)  #
-            print(msg)
             if self.gameOn:
                 self.clientSocket.send(str.encode(msg))
         except:

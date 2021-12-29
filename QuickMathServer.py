@@ -26,12 +26,14 @@ class QuickMathServer:
         self.startGameMSG = None
         self.gameAnsMSG = None
         self.gameWinMSG = None
+        self.gameCount = 0
+        self.playersHistory = []
         self.Q = [("2+2-1 = ", "3"),
                   ("(2^2)*2 = ", "8"),
                   ("The biggest even prime number: ", "2"),
                   ("Complite the sieries 1,1,2,3,5,<?>   ", "8"),
                   ("How many colors are needed on a map to make sure that no border will share a color? ", "4"),
-                  ("How many prime numbers smaller than 10 exist? ","4")]
+                  ("How many prime numbers smaller than 10 exist? ", "4")]
 
     def connectClientTCP(self, conn):
 
@@ -89,29 +91,41 @@ class QuickMathServer:
         return True
 
     def beginGame(self):
-        question, anser = self.Q[int(random.random() * len(self.Q))]
-        self.startGameMSG = str.encode(f"""Welcome to Quick Maths.
-        Player 1: {self.players[0]}
-        Player 2: {self.players[1]}
-        ==
-        Please answer the following question as fast as you can:
-        {question}""")
-        time.sleep(10)
-        self.gameStart.acquire()
-        self.gameStart.notify_all()  # for waiting to the game to start
-        self.gameStart.release()
+        try:
+            question, anser = self.Q[int(random.random() * len(self.Q))]
 
-        self.gameAns.acquire()
-        self.gameAns.wait(timeout=10)
-        self.gameAns.release()
+            self.startGameMSG = str.encode(f"""Welcome to Quick Maths.
+            Player 1: {self.players[0]}
+            Player 2: {self.players[1]}
+            ==
+            Please answer the following question as fast as you can:
+            {question}""")
+            time.sleep(10)
+            self.gameStart.acquire()
+            self.gameStart.notify_all()  # for waiting to the game to start
+            self.gameStart.release()
 
-        self.gameEnd.acquire()
-        self.gameWinMSG = str.encode(f"""       Game over!
-        The correct answer was {anser}!
+            self.gameAns.acquire()
+            self.gameAns.wait(timeout=10)
+            self.gameAns.release()
+            self.gameCount += 1
+            self.playersHistory.append(f"{self.players[0]} vs {self.players[1]}")
+            self.gameEnd.acquire()
+            self.gameWinMSG = str.encode(f"""       Game over!
+            The correct answer was {anser}!
 
-        {f"Congratulations to the winner: {self.players[self.gameAnsMSG[1]] if self.gameAnsMSG[0] == anser else self.players[1 - self.gameAnsMSG[1]]} !" if self.gameAnsMSG is not None else "You such a baby"} """)
-        self.gameEnd.notify_all()
-        self.gameEnd.release()
+            {f"Congratulations to the winner: {self.players[self.gameAnsMSG[1]] if self.gameAnsMSG[0] == anser else self.players[1 - self.gameAnsMSG[1]]} !" if self.gameAnsMSG is not None else "too slow! "} 
+
+            games played on this server: {self.gameCount} 
+            """)
+            self.gameEnd.notify_all()
+            self.gameEnd.release()
+            print(f"\n\ngames played   : {self.gameCount} \nplayers histoy :")
+            for p in self.playersHistory:
+                print(p)
+            print("\n\n")
+        except:
+            pass
 
     def sendOffers(self):
         udpSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -133,7 +147,7 @@ class QuickMathServer:
                     self.serverTCPSocket.bind(("", 0))  # create the TCP listening socket
                 except socket.error as e:
                     pass
-                
+
                 self.host, self.port = self.serverTCPSocket.getsockname()
 
                 udpThread = threading.Thread(target=self.sendOffers)

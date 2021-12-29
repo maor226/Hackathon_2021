@@ -11,7 +11,9 @@ import ipaddress
 class QuickMathServer:
 
     def __init__(self):
-        self.hostIP = 172.1.0.21
+        serverType = input("please chose dev or test. 1 for dev and 2 for test:\t")
+        self.eth = 'eth' + serverType if serverType in ["1", "2"] else 'eth1'
+        self.hostIP = get_if_addr(self.eth)
         self.host = None
         self.UDPport = 13117
         self.clientCount = 0
@@ -106,7 +108,18 @@ class QuickMathServer:
         self.gameEnd.notify_all()
         self.gameEnd.release()
 
-
+    def sendOffers(self):
+        udpSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        print(self.hostIP)
+        msg = struct.pack('IbH', 0xabcddcba, 0x2, self.port)
+        brodcastIP = str(ipaddress.ip_network(self.hostIP + '/' + "24", False).broadcast_address)
+        while self.clientCount < 2:
+            print("sending offer")
+            udpSock.sendto(msg, ('<broadcast>', self.UDPport))
+            time.sleep(1)
+        udpSock.close()
 
     def run(self):
         while True:
